@@ -1,0 +1,74 @@
+.shell {
+  min-height: 100dvh;
+  max-width: var(--mass-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px var(--mass-page-gutter) 8px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.mark { display: flex; align-items: flex-end; gap: 3px; }
+.mark i { display: block; width: 4px; background: var(--mass-accent); }
+.mark i:nth-child(1) { height: 15px; }
+.mark i:nth-child(2) { height: 10px; }
+.mark i:nth-child(3) { height: 19px; }
+.wordmark { font-size: 24px; font-weight: 750; letter-spacing: -0.04em; }
+.wordmark .dot { color: var(--mass-accent); }
+.content {
+  flex: 1;
+  padding: 8px var(--mass-page-gutter) calc(96px + env(safe-area-inset-bottom));
+}
+@media (max-width: 360px) {
+  .content { padding-left: 20px; padding-right: 20px; }
+  .topbar { padding-left: 20px; padding-right: 20px; }
+}
+.icon-btn {
+  min-width: var(--mass-touch-target);
+  min-height: var(--mass-touch-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--mass-border);
+  border-radius: var(--mass-corner-radius);
+  cursor: pointer;
+}
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--mass-content-max);
+  display: flex;
+  border-top: 1px solid var(--mass-border);
+  background: var(--mass-bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav button {
+  flex: 1;
+  min-height: var(--mass-touch-target);
+  background: none;
+  border: 0;
+  color: var(--mass-muted);
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 12px;
+}
+.nav button[aria-current="page"] { color: var(--mass-foreground); }
+.nav .add {
+  background: var(--mass-accent);
+  color: var(--mass-accent-ink);
+  font-size: 24px;
+  font-weight: 700;
+  border-radius: var(--mass-corner-radius);
+  margin: 8px;
+  flex: 0 0 64px;
+  min-height: var(--mass-touch-target);
+}

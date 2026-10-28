@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#151917" />
+  <meta name="description" content="A minimal daily weight tracker. Log your weight and understand your progress." />
+  <title>Mass — Weight Tracker Design Reference</title>
+  <link rel="icon" href="./mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <header class="topbar">
+      <div class="brand" aria-label="Mass home"><span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span></span><span>mass<span class="brand-period">.</span></span></div>
+      <button class="icon-button settings-shortcut" id="settingsShortcut" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg></button>
+    </header>
+
+    <main class="content" id="mainContent">
+      <section id="overviewScreen" class="screen active" aria-labelledby="overviewHeading">
+        <div class="eyebrow-row"><span class="eyebrow" id="overviewDate">WEDNESDAY · 28 OCT</span><span class="sample-tag" id="sampleTag">SAMPLE DATA</span></div>
+        <h1 class="screen-title" id="overviewHeading">Your progress<span class="serif-dot">.</span></h1>
+        <section class="current-metric" aria-label="Current recorded weight">
+          <div class="kicker">LATEST RECORDED WEIGHT</div>
+          <div class="hero-value"><span id="latestWeight">62.4</span><span class="hero-unit" id="latestUnit">kg</span></div>
+          <div class="latest-date" id="latestDate">Last recorded on 28 Oct 2026</div>
+        </section>
+        <div class="stats-row">
+          <article class="stat-box"><div class="stat-label">TOTAL CHANGE</div><div class="stat-number" id="totalChange">+2.4 <span>kg</span></div><div class="stat-foot">In selected period</div></article>
+          <article class="stat-box"><div class="stat-label">AVG. PER WEEK</div><div class="stat-number" id="weeklyChange">+0.2 <span>kg</span></div><div class="stat-foot">Change per week</div></article>
+        </div>
+        <section class="chart-section" aria-labelledby="chartHeading">
+          <div class="section-header"><h2 id="chartHeading">Weight over time</h2><span class="section-muted" id="chartCount">10 entries</span></div>
+          <div class="periods" role="group" aria-label="Chart period">
+            <button class="period-btn" data-period="7D">7D</button><button class="period-btn" data-period="30D">30D</button><button class="period-btn active" data-period="3M">3M</button><button class="period-btn" data-period="6M">6M</button><button class="period-btn" data-period="1Y">1Y</button><button class="period-btn" data-period="ALL">All</button>
+          </div>
+          <div class="chart-wrap" id="chartWrap"><svg id="weightChart" class="weight-chart" viewBox="0 0 350 205" role="img" aria-label="Weight trend over selected period"></svg><div class="chart-blank hidden" id="chartBlank">Record at least two measurements to see your trend.</div></div>
+        </section>
+        <section class="recent-panel" aria-labelledby="recentHeading">
+          <div class="section-header"><h2 id="recentHeading">Last entry</h2><button class="text-link" data-nav="history">See history <span aria-hidden="true">↗</span></button></div>
+          <div class="recent-row"><div class="recent-icon"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><div class="recent-main" id="recentValue">62.4 kg</div><div class="recent-sub" id="recentSub">28 Oct 2026</div></div><span class="recent-delta" id="recentDelta">+0.4 kg</span></div>
+        </section>
+      </section>
+
+      <section id="historyScreen" class="screen" aria-labelledby="historyHeading">
+        <div class="eyebrow">THE RECORD</div><h1 class="screen-title" id="historyHeading">History<span class="serif-dot">.</span></h1>
+        <p class="page-lead">Every check-in, all in one place.</p>
+        <div class="history-summary"><div><span class="kicker">TOTAL ENTRIES</span><strong id="historyCount">10</strong></div><div><span class="kicker">FIRST LOGGED</span><strong id="firstLogged">01 Aug</strong></div></div>
+        <div id="historyEntries"></div>
+      </section>
+
+      <section id="settingsScreen" class="screen" aria-labelledby="settingsHeading">
+        <div class="eyebrow">MAKE IT YOURS</div><h1 class="screen-title" id="settingsHeading">Settings<span class="serif-dot">.</span></h1>
+        <p class="page-lead">A few things, just how you like them.</p>
+        <div class="settings-block"><div class="group-label">PREFERENCES</div><div class="setting-item"><div><strong>Weight units</strong><p>Choose how weights are displayed</p></div><div class="inline-selector" aria-label="Weight units" role="group"><button class="unit-choice selected" data-unit="kg">kg</button><button class="unit-choice" data-unit="lb">lb</button></div></div></div>
+        <div class="settings-block"><div class="group-label">YOUR DATA</div><button class="setting-action" id="exportCsv"><span><strong>Export to CSV</strong><small>Keep a copy of your entries</small></span><span class="arrow">↗</span></button><button class="setting-action dangerous" id="clearData"><span><strong>Clear all entries</strong><small>Permanently remove saved weights</small></span><span class="arrow">↗</span></button></div>
+        <div class="privacy-box"><div class="privacy-icon">✳</div><div><strong>Private by design</strong><p>Your entries are stored in this browser, on this device. The design reference does not upload them to a server.</p></div></div>
+        <div class="version-note">MASS / DESIGN PROTOTYPE / V1.0</div>
+      </section>
+
+      <section id="onboardingScreen" class="screen onboarding-screen" aria-labelledby="onboardHeading">
+        <div class="onboard-illustration" aria-hidden="true"><svg viewBox="0 0 304 192"><defs><linearGradient id="illustrationFill" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bde784" stop-opacity=".24"/><stop offset="1" stop-color="#bde784" stop-opacity="0"/></linearGradient></defs><path d="M0 160H304M0 107H304M0 54H304" stroke="#334038"/><path d="M8 146C40 145 51 124 81 127S124 102 149 106 189 73 214 78 258 51 296 25V192H8Z" fill="url(#illustrationFill)"/><path d="M8 146C40 145 51 124 81 127S124 102 149 106 189 73 214 78 258 51 296 25" fill="none" stroke="#c5f17c" stroke-width="3" stroke-linecap="round"/><circle cx="296" cy="25" r="6" fill="#c5f17c"/><circle cx="296" cy="25" r="12" fill="#c5f17c" opacity=".13"/></svg></div>
+        <div class="eyebrow">A SMALL HABIT, A CLEARER PICTURE</div><h1 class="onboard-title" id="onboardHeading">Track the<br>little changes<span class="serif-dot">.</span></h1><p class="page-lead">One number a day. A better understanding of your progress over time.</p>
+        <div class="onboard-fields"><label class="field-label">PREFERRED UNIT</label><div class="large-toggle" role="group" aria-label="Select preferred unit"><button class="starter-unit selected" data-unit="kg">Kilograms <small>kg</small></button><button class="starter-unit" data-unit="lb">Pounds <small>lb</small></button></div><label class="field-label" for="startingWeight">STARTING WEIGHT <span>(OPTIONAL)</span></label><div class="input-wrap"><input id="startingWeight" type="number" inputmode="decimal" min="1" max="1400" step="0.1" placeholder="e.g. 60.0"/><span class="input-suffix" id="startingSuffix">kg</span></div></div>
+        <button class="primary-button onboard-cta" id="getStarted">Get started <span aria-hidden="true">↗</span></button><p class="onboard-note">No account needed. Your data stays in your browser.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation"><button class="nav-item selected" data-nav="overview" aria-label="Overview"><svg viewBox="0 0 24 24"><path d="M3 12 12 4l9 8v8H3V12Z"/><path d="M9 20v-6h6v6"/></svg><span>Overview</span></button><button class="add-button" id="addButton" aria-label="Log your weight"><svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg></button><button class="nav-item" data-nav="history" aria-label="History"><svg viewBox="0 0 24 24"><path d="M4 4v16h16M7 15l4-5 3 3 5-7"/></svg><span>History</span></button></nav>
+  </div>
+
+  <div class="overlay hidden" id="logOverlay" role="presentation"><div class="overlay-shade" data-close-log="true"></div><section class="log-sheet" role="dialog" aria-modal="true" aria-labelledby="logTitle"><div class="sheet-handle"></div><div class="sheet-top"><div><div class="eyebrow">DAILY CHECK-IN</div><h2 id="logTitle">Log weight<span class="serif-dot">.</span></h2></div><button class="icon-button close-button" id="closeLog" aria-label="Close dialog"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div><form id="weightForm"><label class="field-label" for="weightInput">WEIGHT</label><div class="weight-entry"><input id="weightInput" type="number" min="1" max="1400" step="0.1" inputmode="decimal" required placeholder="0.0" /><span id="logSuffix">kg</span></div><label class="field-label date-label" for="dateInput">DATE</label><input class="date-input" id="dateInput" type="date" required/><div class="log-context" id="logContext">Previous measurement: 62.0 kg</div><button class="primary-button submit-log" type="submit">Save measurement <span aria-hidden="true">↗</span></button><button class="delete-entry hidden" type="button" id="deleteFromEditor">Delete this entry</button></form></section></div>
+  <div class="toast" role="status" id="toast"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

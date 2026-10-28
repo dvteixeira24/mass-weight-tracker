@@ -1,0 +1,90 @@
+.periods { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
+.periods button {
+  min-width: var(--mass-touch-target);
+  min-height: var(--mass-touch-target);
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--mass-border);
+  border-radius: var(--mass-corner-radius);
+  color: var(--mass-muted);
+  cursor: pointer;
+}
+.periods button.active {
+  background: var(--mass-accent);
+  border-color: var(--mass-accent);
+  color: var(--mass-accent-ink);
+  font-weight: 700;
+}
+.card {
+  background: var(--mass-surface);
+  border: 1px solid var(--mass-border);
+  border-radius: var(--mass-corner-radius);
+  padding: 12px;
+}
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.stat-caption { color: var(--mass-muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.stat-value { font-size: 22px; margin-top: 4px; }
+.stat-sub { color: var(--mass-soft); font-size: 12px; margin-top: 2px; }
+.sheet-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: flex-end; justify-content: center; z-index: 50;
+}
+@media (min-width: 700px) {
+  .sheet-backdrop { align-items: center; }
+}
+.sheet {
+  background: var(--mass-surface);
+  border: 1px solid var(--mass-border);
+  border-bottom: 0;
+  border-radius: var(--mass-corner-radius) var(--mass-corner-radius) 0 0;
+  width: 100%; max-width: var(--mass-content-max);
+  padding: 16px var(--mass-page-gutter) calc(20px + env(safe-area-inset-bottom));
+  max-height: 92dvh; overflow: auto;
+}
+@media (min-width: 700px) {
+  .sheet { border-bottom: 1px solid var(--mass-border); border-radius: var(--mass-corner-radius); }
+}
+.field { margin: 12px 0; }
+.field label { display: block; margin-bottom: 6px; color: var(--mass-muted); font-size: 13px; }
+.field input, .field select {
+  width: 100%; min-height: var(--mass-touch-target);
+  background: var(--mass-bg); color: var(--mass-foreground);
+  border: 1px solid var(--mass-border); border-radius: var(--mass-corner-radius);
+  padding: 10px 12px; font-size: 18px;
+}
+.btn {
+  min-height: var(--mass-touch-target);
+  border-radius: var(--mass-corner-radius);
+  border: 1px solid var(--mass-border);
+  background: var(--mass-surface-raised);
+  color: var(--mass-foreground);
+  padding: 10px 16px; cursor: pointer;
+}
+.btn.primary { background: var(--mass-accent); border-color: var(--mass-accent); color: var(--mass-accent-ink); font-weight: 700; }
+.btn.danger { background: transparent; border-color: var(--mass-negative); color: var(--mass-negative); }
+.btn-row { display: flex; gap: 8px; margin-top: 16px; }
+.btn-row .btn { flex: 1; }
+.error { color: var(--mass-negative); font-size: 13px; min-height: 20px; }
+.history-row {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  background: var(--mass-surface); border: 1px solid var(--mass-border);
+  border-radius: var(--mass-corner-radius);
+  padding: 10px 12px; margin: 6px 0; cursor: pointer; text-align: left;
+  min-height: var(--mass-touch-target);
+}
+.history-row small { color: var(--mass-muted); display: block; }
+.history-group h2 { font-size: 13px; color: var(--mass-muted); text-transform: uppercase; letter-spacing: 0.12em; margin: 16px 0 6px; font-family: var(--mass-ui-font); }
+.unit-toggle { display: flex; gap: 8px; }
+.unit-toggle button {
+  flex: 1; min-height: var(--mass-touch-target);
+  border: 1px solid var(--mass-border); border-radius: var(--mass-corner-radius);
+  background: transparent; color: var(--mass-muted); cursor: pointer;
+}
+.unit-toggle button[aria-pressed="true"] { background: var(--mass-accent); color: var(--mass-accent-ink); border-color: var(--mass-accent); font-weight: 700; }
+.notice {
+  background: var(--mass-surface-raised); border: 1px solid var(--mass-border);
+  border-radius: var(--mass-corner-radius); padding: 10px 12px; margin: 8px 0; font-size: 14px;
+}
+.chart-wrap { background: var(--mass-surface); border: 1px solid var(--mass-border); border-radius: var(--mass-corner-radius); padding: 12px; }
+.chart-wrap svg { width: 100%; height: auto; display: block; }
+.chart-point { cursor: pointer; }

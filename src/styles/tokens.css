@@ -1,0 +1,18 @@
+:root {
+  --mass-bg: #151917;
+  --mass-surface: #1d2420;
+  --mass-surface-raised: #252e28;
+  --mass-border: #343d35;
+  --mass-foreground: #f2f3eb;
+  --mass-muted: #a0aba1;
+  --mass-soft: #77877a;
+  --mass-accent: #c5f17c;
+  --mass-accent-ink: #172017;
+  --mass-negative: #e9a49b;
+  --mass-ui-font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mass-editorial-font: Georgia, 'Times New Roman', serif;
+  --mass-page-gutter: 27px;
+  --mass-content-max: 480px;
+  --mass-corner-radius: 3px;
+  --mass-touch-target: 44px;
+}

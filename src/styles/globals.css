@@ -1,0 +1,26 @@
+@import url('./tokens.css');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--mass-bg);
+  color: var(--mass-foreground);
+  font-family: var(--mass-ui-font);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, .serif {
+  font-family: var(--mass-editorial-font);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mass-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
