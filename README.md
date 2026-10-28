@@ -18,6 +18,8 @@ Requires Wrangler login for deploy: `pnpm exec wrangler login`.
 
 ## Use
 
+**Install (PWA basics):** the production build is installable — `manifest.webmanifest` (standalone, theme `#151917`, 192/512 + maskable icons), iOS touch icon, and a minimal same-origin service worker (`public/sw.js`) caching the app shell for offline launch. No push, no background sync, no analytics. Install / Add to Home Screen from the phone browser while online once; the app then opens offline with your locally stored entries.
+
 - First visit → pick kg/lb (default kg), optionally enter today's weight, Start tracking.
 - Overview → latest weight/date, period total + per-week cards (7D/30D/3M/6M/1Y/All), time-proportional SVG chart with keyboard-focusable points + data-table alternative, recent entry.
 - `+` → log sheet (mobile bottom sheet / desktop dialog): number + inputMode decimal, unit visible, today default, past allowed, future blocked, finite positive only. Existing date → confirm replace. Edit from History; Delete → destructive confirm. Save → Overview, focus restored.
