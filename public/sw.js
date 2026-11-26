@@ -1,5 +1,5 @@
 /* mass. service worker — offline app-shell cache. Versioned; old caches purged on activate. */
-const CACHE = 'mass-weight-tracker-v1';
+const CACHE = 'mass-weight-tracker-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add('/')).then(() => self.skipWaiting()));
@@ -19,6 +19,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // local assets only; no third-party caching
+  if (url.pathname.startsWith('/api/')) return; // never cache API responses
   event.respondWith(
     caches.match(request, { ignoreSearch: false }).then((cached) => {
       if (cached) return cached;

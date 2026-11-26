@@ -4,7 +4,8 @@ import {
   defaultData,
   type StoredData,
 } from '../storage/weightRepository';
-import type { WeightUnit } from '../domain/weight';
+import { mergeSnapshots, toSnapshot, type Snapshot } from '../domain/sync';
+import { newId, type WeightUnit } from '../domain/weight';
 
 const repo = createRepository(typeof localStorage !== 'undefined' ? localStorage : null);
 
@@ -38,6 +39,22 @@ export function useWeightStore() {
     if (msg) setNotice(msg);
   }, []);
 
+  const applyRemote = useCallback(
+    (remote: Snapshot, resetAt: number): boolean => {
+      const current = dataRef.current;
+      const merged = mergeSnapshots(toSnapshot(current), remote, resetAt);
+      if (!merged.changed && current.resetAt === resetAt) return false;
+      const ids = new Map(current.records.map((r) => [r.date, r.id]));
+      const records = merged.snapshot.records.map((r) => ({
+        id: ids.get(r.date) ?? newId(),
+        ...r,
+      }));
+      persist({ ...current, records, tombstones: merged.snapshot.tombstones, resetAt });
+      return merged.changed;
+    },
+    [persist],
+  );
+
   const actions = useMemo(
     () => ({
       setUnit: (unit: WeightUnit) =>
@@ -60,8 +77,9 @@ export function useWeightStore() {
         persist(repo.upsert(dataRef.current, entry), msg),
       remove: (id: string) => persist(repo.remove(dataRef.current, id), 'Entry deleted.'),
       clearEntries: () => persist(repo.clearEntries(dataRef.current), 'All entries deleted.'),
+      applyRemote,
     }),
-    [persist],
+    [persist, applyRemote],
   );
 
   return { data, blocked, notice, setNotice, ...actions };

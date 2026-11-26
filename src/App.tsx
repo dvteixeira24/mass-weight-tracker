@@ -7,11 +7,13 @@ import Overview from './screens/Overview';
 import History from './screens/History';
 import Settings from './screens/Settings';
 import { useWeightStore, type Screen } from './hooks/useWeightStore';
+import { useSync } from './hooks/useSync';
 import type { WeightRecord } from './domain/weight';
 import './components/PeriodPicker.css';
 
 export default function App() {
   const store = useWeightStore();
+  const sync = useSync(store);
   const [screen, setScreen] = useState<Screen>('overview');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<WeightRecord | undefined>(undefined);
@@ -97,7 +99,15 @@ export default function App() {
           unit={unit}
           storageBlocked={store.blocked}
           onUnit={store.setUnit}
-          onClear={store.clearEntries}
+          onClear={sync.clearAll}
+          sync={{
+            status: sync.status,
+            email: sync.me?.email,
+            lastSyncedAt: sync.lastSyncedAt,
+            onSyncNow: sync.syncNow,
+            onSignOut: sync.signOut,
+            onDeleteAccount: sync.deleteAccount,
+          }}
         />
       ) : null}
       {sheetOpen ? (

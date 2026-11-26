@@ -32,7 +32,7 @@ export default function Onboarding({
     <div>
       <p style={{ color: 'var(--mass-muted)', fontSize: 12, letterSpacing: '0.12em' }}>WELCOME</p>
       <h1 style={{ fontSize: 40 }}>Start tracking</h1>
-      <p style={{ color: 'var(--mass-muted)' }}>Private by design — entries stay in this browser.</p>
+      <p style={{ color: 'var(--mass-muted)' }}>Private by design — entries stay in this browser unless you sign in.</p>
       <div className="field">
         <label id="unit-label">Units</label>
         <div className="unit-toggle" role="group" aria-labelledby="unit-label">
