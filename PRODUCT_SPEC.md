@@ -16,7 +16,7 @@ A minimal, mobile-first personal weight log. The user can save one weight for ea
   - Group by month; newest first; weight and delta from previous entry
   - Tap row to edit
 - **Settings**
-  - Unit preference; export CSV; delete all; local-data privacy note
+  - Unit preference; export CSV for a chosen date range; optional Google sign-in and sync; delete all; privacy note
 - **Onboarding**
   - Select unit; optional starting entry; start tracking
 
@@ -26,28 +26,34 @@ A minimal, mobile-first personal weight log. The user can save one weight for ea
 3. Backfill: tap +; set a past date; save. Chart/stat order is chronological, not input order.
 4. Correction: open history; tap entry; change value/date; save. Collision with a recorded date prompts replacement.
 5. Review: choose period; graph and change metrics update together, but latest recorded weight continues to show last overall measurement.
-6. Backup: export CSV; saved weight entries leave the browser only when the user explicitly downloads the CSV.
-7. Destruction: clear all entries requires explicit confirmation; preference remains, empty state appears.
+6. Backup: export CSV for a date range (or everything); saved weight entries leave the browser only through the CSV download or because the user signed in to sync.
+7. Cross-device: sign in with Google; local entries are merged up on first sign-in, then changes flow both ways while the app is open. Sign out keeps local data.
+8. Destruction: clear all entries requires explicit confirmation; when signed in it also clears the cloud copy and keeps the preference. Delete account removes synced entries and sign-in from the server, keeping this device's entries.
 
 ## Data model
 ```ts
 export type WeightUnit = 'kg' | 'lb';
 export interface WeightRecord {
-  id: string;               // UUID
+  id: string;               // local identity for edit/delete UI; never synced
   date: string;             // YYYY-MM-DD local calendar date
   weightGrams: number;      // positive integer
+  updatedAt?: number;       // epoch ms of the last local edit; absent on v1 rows, read as 0
 }
-export interface UserPreferences { unit: WeightUnit; onboardingComplete: boolean; }
+export interface Tombstone { date: string; updatedAt: number; } // a deleted date
+export interface UserPreferences { unit: WeightUnit; onboardingComplete: boolean; } // device-local, never synced
 export interface StoredData {
-  schemaVersion: 1;
+  schemaVersion: 2;
   preferences: UserPreferences;
   records: WeightRecord[];
+  tombstones: Tombstone[];
+  resetAt: number;          // last server wipe observed by this device, 0 if none
 }
 ```
 
-- For v1 use an in-browser storage adapter with explicit schema version and validation on read; localStorage is sufficient at this scale. Keep the adapter interface replaceable.
-- Saving and charting work without a network connection once the app assets are cached; actual offline launch support is a separate PWA enhancement.
-- The app must not silently send user measurements anywhere.
+- Local storage is a versioned schema with validation on read; v1 data upgrades in place (the key stays `mass-weight-tracker-v1`).
+- Signed out, saving and charting work without a network connection; the app never contacts a server. Signed in, the app syncs with this app's Cloudflare Worker (D1): records, deletion tombstones and edit times keyed to the Google account. Preferences stay on the device.
+- Conflicts merge per date by `updatedAt`, newest wins; on a tie a deletion wins. `resetAt` makes "delete all" stick across devices.
+- The app must not send measurements anywhere unless the user has signed in, and must never do so silently otherwise.
 
 ## Dates and period semantics
 - Local calendar date, not UTC timestamps. Entries are unique by date.
@@ -62,8 +68,9 @@ export interface StoredData {
 - Supported modern Chrome, Firefox, Safari and mobile browsers.
 - Works at 320 / 375 / 390 / 430 / 768 px width with safe areas and keyboard open.
 - Correct add/edit/delete/replace and stable chart stats across unit changes.
-- Data survives reload, but the UI states clearly that local data can be lost if browser storage is cleared; CSV export is available.
+- Data survives reload, but the UI states clearly that local data can be lost if browser storage is cleared; CSV export is available with an optional date range.
 - Keyboard accessible controls, modal focus handling, and alternative to non-text chart info.
-- Unit tests for date windows, kg↔lb conversion, weekly average, missing days, duplicate records, CSV escaping.
-- Production build deploys as Cloudflare Workers static assets with SPA fallback.
-- No data collection, analytics, tracking, or external fonts by default.
+- Unit tests for date windows, kg↔lb conversion, weekly average, missing days, duplicate records, CSV escaping, range filtering, and sync merge rules.
+- Signed out, no network requests. Signed in, entries sync across devices and deletions stay deleted.
+- Production build deploys as Cloudflare Workers static assets with SPA fallback plus a `/api/*` Worker backed by D1.
+- No analytics, tracking, or external fonts; the only third party is Google sign-in, and only after the user chooses it.

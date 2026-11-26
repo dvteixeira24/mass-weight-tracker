@@ -1,63 +1,90 @@
 # Cloudflare deployment notes
 
-## Recommended deployment topology
+## Topology
 
 ```
 User's browser
-  ├── Static SPA (HTML/CSS/JS)    <- Cloudflare Workers static assets
-  └── Browser localStorage         <- User's entries stay on the device
+  ├── Static SPA (HTML/CSS/JS)        <- Cloudflare Workers static assets
+  └── Browser localStorage            <- Source of truth; works offline, signed out
 
-Cloudflare Workers
-  └── Hosts built app assets      <- No user-measurement endpoint in V1
+Cloudflare Worker (worker/index.ts)
+  ├── GET/POST/DELETE /api/*          <- Only these paths reach the Worker
+  ├── Google OAuth code flow          <- Scopes: openid email profile
+  └── D1 (binding DB)                 <- users, sessions, entries per Google account
+
+Everything else -> ./dist (SPA fallback)
 ```
 
-V1 deliberately avoids a server-side database and login. Hosting on Cloudflare is *not* the same as syncing data to Cloudflare. The user's saved entries stay in their current browser/profile; browsers can clear them, and they do not sync between devices. CSV backup is mandatory.
+Signed out, the Worker is never called and measurements stay on the device. Signed in, entries (local date, grams, last-edit time) and deletion tombstones are stored in D1 keyed to the Google subject id. No analytics, no third parties beyond Google sign-in.
 
-## Deploy this reference prototype (optional)
-The package contains a static interactive design reference, **not the production React implementation**. From the ZIP's root directory:
+## Configuration
 
-```bash
-pnpm install
-pnpm dev
-# after review:
-pnpm deploy
-```
-
-`wrangler.jsonc` points `assets.directory` to `./prototype` and uses SPA not-found handling. Deployment requires Cloudflare authentication and appropriate account permissions. Use a different Worker name to avoid collisions with existing projects.
-
-## Deploy the rebuilt production app
-1. Scaffold Vite/React/TypeScript, implement and run tests.
-2. `pnpm build` to produce `./dist`.
-3. Set `wrangler.jsonc` `assets.directory` to `./dist` and `not_found_handling` to `single-page-application`.
-4. `pnpm exec wrangler login` if not already authenticated.
-5. `pnpm deploy` or `pnpm exec wrangler deploy`.
-6. Open the generated `*.workers.dev` URL, verify SPA loads and data remains local.
-7. Connect a custom domain in your Cloudflare account if desired.
-
-Example configuration:
+`wrangler.jsonc`:
 
 ```jsonc
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "mass-weight-tracker",
   "compatibility_date": "2026-10-28",
+  "main": "./worker/index.ts",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mass-weight-tracker",
+      "database_id": "<from wrangler d1 create>",
+      "migrations_dir": "./migrations"
+    }
+  ]
 }
 ```
 
-If you later use the Cloudflare Vite plugin, follow that integration's guidance; it can configure asset output automatically.
+Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Local dev also sets `APP_ORIGIN` in `.dev.vars` (gitignored) so the OAuth redirect uses the Vite port. Production derives the origin from the request.
 
-## Future Cloudflare sync option (NOT part of MVP)
-- Deploy a Worker API with typed auth/session validation.
-- Bind Cloudflare D1 as SQL storage for authenticated user measurements.
-- Enforce ownership for all record operations, add schema migrations, consent/privacy controls and an explicit local-to-cloud migration flow.
-- Avoid storing anonymous personal measurements in a shared unprotected database.
+## Deploy
 
-## Verified official references (checked 2026-10-28)
-- Workers static assets: https://developers.cloudflare.com/workers/static-assets/
+1. `pnpm exec wrangler d1 create mass-weight-tracker` and paste `database_id` into `wrangler.jsonc`.
+2. `pnpm exec wrangler d1 migrations apply mass-weight-tracker --remote`.
+3. `pnpm exec wrangler secret put GOOGLE_CLIENT_ID` and `pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET`.
+4. Google Cloud → Credentials → OAuth client type **Web application**; authorized redirect URIs:
+   - `http://localhost:5173/api/auth/google/callback`
+   - `http://localhost:8787/api/auth/google/callback`
+   - `https://<worker-host>/api/auth/google/callback`
+   Consent screen: External, scopes `openid`, `email`, `profile`; add the owner as a test user while in Testing.
+5. `pnpm build && pnpm deploy`.
+6. Open the `*.workers.dev` URL (or custom domain, registered in the redirect list), sign in from Settings, add an entry, and confirm the row in D1:
+
+```bash
+pnpm exec wrangler d1 execute mass-weight-tracker --remote --command \
+  "SELECT user_id, date, weight_grams, updated_at, deleted FROM entries LIMIT 5"
+```
+
+## Local development
+
+```bash
+pnpm db:migrate:local
+pnpm dev:worker        # :8787, serves dist/ and /api/*
+pnpm dev               # :5173, proxies /api to :8787
+```
+
+Cookies are host-based, so the session created through either port works on both. `Secure` cookies are accepted on `localhost` by Chrome and Firefox.
+
+## Operational notes
+
+- Sessions: 90-day absolute expiry, deleted on sign-out, expired rows purged lazily at sign-in.
+- `DELETE /api/records` sets `users.reset_at` and clears rows, so a later sync from an old device cannot resurrect a wipe.
+- Tombstones are kept indefinitely (at most one row per deleted date). They are what keeps deletions durable across devices.
+- No rate limiting; this is a personal app. Add Cloudflare rate limiting before opening it to the public.
+- Live remote-vs-local divergence is resolved per date by `updatedAt`; see `src/domain/sync.ts`.
+
+## Verified references (checked 2026-11-26)
+
+- Workers static assets + `run_worker_first`: https://developers.cloudflare.com/workers/static-assets/
 - SPA routing: https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/
-- Wrangler configuration: https://developers.cloudflare.com/workers/wrangler/configuration/
-- D1 (future): https://developers.cloudflare.com/d1/get-started/
+- D1 + migrations: https://developers.cloudflare.com/d1/
+- Google OAuth web-server flow: https://developers.google.com/identity/protocols/oauth2/web-server
