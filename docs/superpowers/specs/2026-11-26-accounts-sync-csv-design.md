@@ -71,7 +71,7 @@ export interface WeightRecord {
   id: string;          // local identity for edit/delete UI; never synced
   date: string;        // YYYY-MM-DD local
   weightGrams: number; // positive integer
-  updatedAt: number;   // epoch ms of the last local edit
+  updatedAt?: number;  // epoch ms of the last local edit; absent on legacy v1 rows and read as 0
 }
 
 export interface Tombstone { date: string; updatedAt: number; }
@@ -85,7 +85,7 @@ export interface StoredData {
 }
 ```
 
-Migration on read: a valid v1 payload (`schemaVersion: 1`, no `tombstones`) loads as v2 with `updatedAt = Date.now()` for every record, `tombstones: []`, `resetAt: 0`. All existing validation and de-duplication rules stay. Unknown/corrupt payloads still fall back to defaults without throwing.
+Migration on read: a valid v1 payload (`schemaVersion: 1`, no `tombstones`) loads as v2 with `updatedAt` left absent (read as 0, so any real edit wins the first merge), `tombstones: []`, `resetAt: 0`. All existing validation and de-duplication rules stay. Unknown/corrupt payloads still fall back to defaults without throwing.
 
 `upsert` and every mutation set `updatedAt = Date.now()`. Deleting a record moves its date into `tombstones` (replacing an older tombstone for the same date). `clearEntries` empties `records` and `tombstones`; when signed in it also calls the server clear endpoint.
 
@@ -122,7 +122,7 @@ Tombstones are rows with `deleted = 1` and `weight_grams = NULL`. They are kept 
 
 ## API
 
-All request/response bodies are JSON. Errors are `{ "error": "message" }` with `400` for malformed input, `401` for a missing/expired session, `405` for a wrong method, `413` for an oversized snapshot, and `404` for unknown `/api/*` paths.
+All request/response bodies are JSON. Errors are `{ "error": "message" }` with `400` for malformed input, `401` for a missing/expired session, `413` for an oversized snapshot, and `404` for unknown `/api/*` paths.
 
 | Route | Auth | Behaviour |
 |---|---|---|
@@ -136,7 +136,7 @@ All request/response bodies are JSON. Errors are `{ "error": "message" }` with `
 
 Session cookie: `mass_session`, HttpOnly, Secure, SameSite=Lax, Path=/, Max-Age 90 days. Value is a 32-byte random base64url token; D1 stores only its SHA-256 hex. No signing secret. Expired rows are deleted lazily on successful sign-in.
 
-Secrets: `GOOGLE_CLIENT_ID` (also fine as a plain var) and `GOOGLE_CLIENT_SECRET` via `wrangler secret put`; local values in `.dev.vars` (already gitignored). Nothing else.
+Secrets: `GOOGLE_CLIENT_ID` (also fine as a plain var) and `GOOGLE_CLIENT_SECRET` via `wrangler secret put`; local values in `.dev.vars` (already gitignored). Optional `APP_ORIGIN` overrides the OAuth redirect origin — required in local dev because Vite proxies `/api` to port 8787 while the browser is on port 5173. Nothing else.
 
 CSRF: SameSite=Lax cookie, mutations are JSON-`POST`/`DELETE` only (non-simple requests), OAuth `state` cookie. No CORS headers are emitted.
 
@@ -160,7 +160,7 @@ mergeSnapshots(
 
 - Collapse each side to `date → { weightGrams | null, updatedAt }` (`null` = deleted).
 - For each date keep the entry with the greater `updatedAt`; on equality the deleted entry wins.
-- Drop every entry with `updatedAt <= resetAt` before comparing.
+- Drop every entry with `updatedAt <= resetAt` before comparing, but only when `resetAt > 0` (otherwise legacy rows with `updatedAt = 0` would vanish).
 - `changed` is true when the resulting local snapshot differs from the input local snapshot, so the UI can say "Updated from another device".
 - Output records sorted by date ascending; tombstones sorted by date; a date never appears in both.
 
@@ -195,7 +195,7 @@ New `src/hooks/useSync.ts` (or equivalent) wrapping an `AuthState`:
 
 1. On mount, `GET /api/me`. `401` → signed out, no network calls afterwards.
 2. Signed in: run `POST /api/sync` immediately with the local snapshot, merge the response into local state, persist.
-3. Re-run sync after any local mutation (debounced 800 ms), on window `online`, and when the tab becomes visible again. The full local snapshot is the queue, so a failed request needs no bookkeeping.
+3. Re-run sync after any local mutation, with one request in flight at a time; a change that arrives during a request queues one more run when it settles. Also re-run on window `online` and when the tab becomes visible again. The full local snapshot is the queue, so a failed request needs no bookkeeping.
 4. Sync failures never block or roll back local writes; status becomes "Offline" / "Not synced" with the last success time.
 5. Sign out: `POST /api/auth/logout`, keep all local data, stop syncing.
 6. Sign in is a normal navigation to `/api/auth/google`; the callback returns to `/` and the app re-reads `/api/me`.
@@ -246,11 +246,11 @@ E2E: the existing Playwright suite must pass unchanged (its v1 seeds exercise mi
 1. `pnpm exec wrangler d1 create mass-weight-tracker`, copy `database_id` into `wrangler.jsonc`.
 2. `pnpm exec wrangler d1 migrations apply mass-weight-tracker --local` for dev.
 3. `pnpm exec wrangler secret put GOOGLE_CLIENT_ID` and `... GOOGLE_CLIENT_SECRET`.
-4. Google Cloud: OAuth client type **Web application**, authorized redirect URIs `http://localhost:8787/api/auth/google/callback` and `https://<worker-host>/api/auth/google/callback`. Consent screen: External, scopes `openid`, `email`, `profile`; add the owner as a test user while in Testing.
+4. Google Cloud: OAuth client type **Web application**, authorized redirect URIs `http://localhost:5173/api/auth/google/callback` (Vite dev), `http://localhost:8787/api/auth/google/callback` (direct Worker dev) and `https://<worker-host>/api/auth/google/callback`. Consent screen: External, scopes `openid`, `email`, `profile`; add the owner as a test user while in Testing.
 5. `pnpm exec wrangler d1 migrations apply mass-weight-tracker --remote`.
 6. `pnpm build && pnpm deploy`.
 
-Local dev: `pnpm dev:worker` (`wrangler dev --port 8787`) in one terminal, `pnpm dev` (Vite) in another; Vite proxies `/api` to `127.0.0.1:8787`. Cookies are host-based, so both ports share the session. `Secure` cookies are accepted on `localhost` by Chrome and Firefox; if a dev browser rejects them, run the Worker behind HTTPS or use a tunnel.
+Local dev: `pnpm dev:worker` (`wrangler dev --port 8787`) in one terminal, `pnpm dev` (Vite) in another; Vite proxies `/api` to `127.0.0.1:8787`. Cookies are host-based, so both ports share the session. `APP_ORIGIN=http://localhost:5173` in `.dev.vars` keeps the OAuth redirect on the port the browser is using. `Secure` cookies are accepted on `localhost` by Chrome and Firefox; if a dev browser rejects them, run the Worker behind HTTPS or use a tunnel.
 
 Add every origin you actually open (workers.dev and any custom domain) to the authorized redirect URIs, since the redirect URI is derived from the request origin and must match exactly.
 
