@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "mass-weight-tracker",
-      "database_id": "REPLACE_WITH_WRANGLER_D1_CREATE_ID",
+      "database_id": "1dc17f4c-11df-4cb7-b9bf-0355e4687bf1",
       "migrations_dir": "./migrations"
     }
   ]
