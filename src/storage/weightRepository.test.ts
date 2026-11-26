@@ -40,8 +40,10 @@ describe('weightRepository', () => {
   });
   test('sanitizes bad records, dedupes by date (keeps last), sorts', () => {
     const bad: StoredData = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       preferences: { unit: 'lb', onboardingComplete: true },
+      tombstones: [],
+      resetAt: 0,
       records: [
         { id: 'a', date: '2026-10-20', weightGrams: 70000 },
         { id: 'b', date: '2026-10-20', weightGrams: 71000 },
@@ -88,5 +90,55 @@ describe('weightRepository', () => {
     data = repo.clearEntries(data);
     expect(data.records).toHaveLength(0);
     expect(data.preferences.unit).toBe('lb');
+  });
+});
+
+describe('schema v2 and tombstones', () => {
+  test('v1 payload migrates on read without losing records', () => {
+    const v1 = {
+      schemaVersion: 1,
+      preferences: { unit: 'lb', onboardingComplete: true },
+      records: [{ id: 'a', date: '2026-10-20', weightGrams: 70000 }],
+    };
+    const repo = createRepository(memStorage({ [STORAGE_KEY]: JSON.stringify(v1) }));
+    const loaded = repo.load();
+    expect(loaded.schemaVersion).toBe(2);
+    expect(loaded.records).toHaveLength(1);
+    expect(loaded.records[0].updatedAt).toBeUndefined();
+    expect(loaded.tombstones).toEqual([]);
+    expect(loaded.resetAt).toBe(0);
+    expect(loaded.preferences.unit).toBe('lb');
+  });
+
+  test('upsert stamps updatedAt and clears a tombstone for that date', () => {
+    const repo = createRepository(memStorage());
+    let data = repo.load();
+    data = { ...data, tombstones: [{ date: '2026-10-20', updatedAt: 5 }] };
+    data = repo.upsert(data, { date: '2026-10-20', weightGrams: 70000 });
+    expect(data.records[0].updatedAt).toBeGreaterThan(0);
+    expect(data.tombstones).toEqual([]);
+  });
+
+  test('remove creates a tombstone; moving a date tombstones the old date', () => {
+    const repo = createRepository(memStorage());
+    let data = repo.load();
+    data = repo.upsert(data, { date: '2026-10-20', weightGrams: 70000 });
+    const id = data.records[0].id;
+    data = repo.upsert(data, { id, date: '2026-10-21', weightGrams: 71000 });
+    expect(data.tombstones.map((t) => t.date)).toEqual(['2026-10-20']);
+    data = repo.remove(data, id);
+    expect(data.records).toEqual([]);
+    expect(data.tombstones.map((t) => t.date)).toEqual(['2026-10-20', '2026-10-21']);
+  });
+
+  test('clearEntries drops records and tombstones, keeps preferences', () => {
+    const repo = createRepository(memStorage());
+    let data = repo.load();
+    data = repo.upsert(data, { date: '2026-10-20', weightGrams: 70000 });
+    data = repo.remove(data, data.records[0].id);
+    data = repo.clearEntries(data);
+    expect(data.records).toEqual([]);
+    expect(data.tombstones).toEqual([]);
+    expect(data.preferences.unit).toBe('kg');
   });
 });

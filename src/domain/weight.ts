@@ -8,6 +8,7 @@ export interface WeightRecord {
   id: string;
   date: string; // YYYY-MM-DD local
   weightGrams: number; // positive integer
+  updatedAt?: number; // epoch ms; absent on legacy v1 rows, read as 0
 }
 
 export interface PeriodStats {

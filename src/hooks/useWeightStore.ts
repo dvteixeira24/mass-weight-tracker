@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createRepository,
   defaultData,
@@ -18,6 +18,7 @@ export function useWeightStore() {
       return defaultData();
     }
   });
+  const dataRef = useRef(data);
   const [blocked, setBlocked] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export function useWeightStore() {
   }, []);
 
   const persist = useCallback((next: StoredData, msg?: string) => {
+    dataRef.current = next;
     setData(next);
     try {
       repo.save(next);
@@ -39,11 +41,11 @@ export function useWeightStore() {
   const actions = useMemo(
     () => ({
       setUnit: (unit: WeightUnit) =>
-        persist({ ...data, preferences: { ...data.preferences, unit } }),
+        persist({ ...dataRef.current, preferences: { ...dataRef.current.preferences, unit } }),
       completeOnboarding: (initial?: { date: string; weightGrams: number }) => {
         let next: StoredData = {
-          ...data,
-          preferences: { ...data.preferences, onboardingComplete: true },
+          ...dataRef.current,
+          preferences: { ...dataRef.current.preferences, onboardingComplete: true },
         };
         if (initial) {
           try {
@@ -55,11 +57,11 @@ export function useWeightStore() {
         persist(next);
       },
       upsert: (entry: { id?: string; date: string; weightGrams: number }, msg = 'Saved.') =>
-        persist(repo.upsert(data, entry), msg),
-      remove: (id: string) => persist(repo.remove(data, id), 'Entry deleted.'),
-      clearEntries: () => persist(repo.clearEntries(data), 'All entries deleted.'),
+        persist(repo.upsert(dataRef.current, entry), msg),
+      remove: (id: string) => persist(repo.remove(dataRef.current, id), 'Entry deleted.'),
+      clearEntries: () => persist(repo.clearEntries(dataRef.current), 'All entries deleted.'),
     }),
-    [data, persist],
+    [persist],
   );
 
   return { data, blocked, notice, setNotice, ...actions };
