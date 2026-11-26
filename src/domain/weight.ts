@@ -94,8 +94,16 @@ export function filterByPeriod(records: WeightRecord[], period: PeriodKey, today
   return sorted.filter((r) => r.date >= from && r.date <= today);
 }
 
-/** Stats from first/last measurement within window. Null when <2 distinct dates. */
-export function periodStats(
+/** Inclusive date-range filter; an empty bound means unbounded. */
+export function filterByRange(records: WeightRecord[], from: string, to: string): WeightRecord[] {
+  const lo = from || null;
+  const hi = to || null;
+  return [...records]
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .filter((r) => (!lo || r.date >= lo) && (!hi || r.date <= hi));
+}
+
+/** Stats from first/last measurement within window. Null when <2 distinct dates. */export function periodStats(
   within: WeightRecord[],
   unit: WeightUnit,
 ): PeriodStats | null {

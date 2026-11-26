@@ -9,6 +9,7 @@ import {
   addLocalDays,
   diffLocalCalendarDays,
   filterByPeriod,
+  filterByRange,
   periodStats,
   toCsv,
   type PeriodKey,
@@ -157,5 +158,32 @@ describe('formatting + csv', () => {
     expect(lines[0]).toBe('date,weight_kg,weight_lb');
     expect(lines[1]).toMatch(/^2026-10-01,70\.0,/);
     expect(lines[2]).toMatch(/^2026-10-15,71\.4,/);
+  });
+});
+
+describe('filterByRange', () => {
+  const recs = [
+    { id: 'a', date: '2026-09-20', weightGrams: 70000 },
+    { id: 'b', date: '2026-10-20', weightGrams: 72000 },
+    { id: 'c', date: '2026-11-20', weightGrams: 71000 },
+  ];
+
+  test('both bounds inclusive, sorted oldest first', () => {
+    expect(filterByRange(recs, '2026-10-01', '2026-10-31').map((r) => r.date)).toEqual(['2026-10-20']);
+    expect(filterByRange(recs, '2026-09-20', '2026-10-20').map((r) => r.date)).toEqual([
+      '2026-09-20',
+      '2026-10-20',
+    ]);
+  });
+
+  test('empty bound is unbounded', () => {
+    expect(filterByRange(recs, '', '2026-10-20').map((r) => r.date)).toEqual(['2026-09-20', '2026-10-20']);
+    expect(filterByRange(recs, '2026-10-01', '').map((r) => r.date)).toEqual(['2026-10-20', '2026-11-20']);
+    expect(filterByRange(recs, '', '')).toHaveLength(3);
+  });
+
+  test('empty result and empty input', () => {
+    expect(filterByRange(recs, '2027-01-01', '2027-02-01')).toEqual([]);
+    expect(filterByRange([], '', '')).toEqual([]);
   });
 });

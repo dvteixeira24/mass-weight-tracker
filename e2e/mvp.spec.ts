@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 const KEY = 'mass-weight-tracker-v1';
 
@@ -178,6 +179,35 @@ test.describe('MVP journeys', () => {
     });
     await noOverflow(page);
     await context.setOffline(false);
+  });
+
+  test('CSV export honours a date range', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.evaluate(() =>
+      localStorage.setItem(
+        'mass-weight-tracker-v1',
+        JSON.stringify({
+          schemaVersion: 1,
+          preferences: { unit: 'kg', onboardingComplete: true },
+          records: [
+            { id: 'a', date: '2026-09-20', weightGrams: 70000 },
+            { id: 'b', date: '2026-10-20', weightGrams: 72000 },
+          ],
+        }),
+      ),
+    );
+    await page.reload();
+    await page.getByRole('button', { name: /open settings/i }).click();
+    await page.getByLabel(/^from$/i).fill('2026-10-01');
+    await page.getByLabel(/^to$/i).fill('2026-10-31');
+    await expect(page.getByText(/1 entry in range/i)).toBeVisible();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: /export csv/i }).click();
+    const download = await downloadPromise;
+    const csv = readFileSync((await download.path())!, 'utf8');
+    expect(csv).toContain('2026-10-20');
+    expect(csv).not.toContain('2026-09-20');
   });
 
   for (const width of [320, 375, 430, 768]) {

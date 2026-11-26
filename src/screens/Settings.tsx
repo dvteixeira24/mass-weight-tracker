@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { toCsv, type WeightRecord, type WeightUnit } from '../domain/weight';
+import { useMemo, useState } from 'react';
+import { filterByRange, toCsv, todayLocal, type WeightRecord, type WeightUnit } from '../domain/weight';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function Settings({
@@ -16,14 +16,23 @@ export default function Settings({
   onClear: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const earliest = useMemo(
+    () => [...records].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))[0]?.date ?? '',
+    [records],
+  );
+  const [from, setFrom] = useState(earliest);
+  const [to, setTo] = useState(todayLocal());
+  const ranged = useMemo(() => filterByRange(records, from, to), [records, from, to]);
+  const rangeValid = !from || !to || from <= to;
+  const canExport = records.length > 0 && rangeValid && ranged.length > 0;
 
   const download = () => {
-    const csv = toCsv(records, unit);
+    const csv = toCsv(ranged, unit);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'mass-weight-export.csv';
+    a.download = `mass-weight-export-${from || 'all'}_${to || 'all'}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -46,11 +55,36 @@ export default function Settings({
       </div>
       <div className="card" style={{ marginTop: 8 }}>
         <div className="stat-caption">Backup</div>
-        <p className="stat-sub">
-          Export {records.length} {records.length === 1 ? 'entry' : 'entries'} as CSV (date, kg, lb — oldest first).
+        <p className="stat-sub">Export weight entries as CSV (date, kg, lb — oldest first).</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div className="field">
+            <label htmlFor="export-from">From</label>
+            <input
+              id="export-from"
+              type="date"
+              max={todayLocal()}
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="export-to">To</label>
+            <input
+              id="export-to"
+              type="date"
+              max={todayLocal()}
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="stat-sub" role={rangeValid ? undefined : 'alert'}>
+          {rangeValid
+            ? `${ranged.length} ${ranged.length === 1 ? 'entry' : 'entries'} in range. Leave a date empty for no limit.`
+            : 'Start date must be on or before end date.'}
         </p>
         <div className="btn-row">
-          <button type="button" className="btn primary" onClick={download} disabled={records.length === 0}>
+          <button type="button" className="btn primary" onClick={download} disabled={!canExport}>
             Export CSV
           </button>
         </div>
